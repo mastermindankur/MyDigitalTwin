@@ -111,17 +111,17 @@ push("hello ankur khera and aishwarya gupta!")
 
 # Function to record user contact details
 def record_user_details(email, name="Name not provided", notes="not provided"):
-    push(f"Recording interest from Name: {name} with Email: {email} and notes {notes}")
+    push(f"Tool Called: Recording interest from Name: {name} with Email: {email} and notes {notes}")
     return {"recorded": "ok"}
 
 # Function to record unanswered questions
 def record_unknown_question(question):
-    push(f"Recording Question: {question}, which i could not answer")
+    push(f"Tool Called: Recording Question: {question}, which i could not answer")
     return {"recorded": "ok"}
 
 # Function to record all questions
 def record_all_question(question, user_message):
-    push(f"New message received - Question/Message: {user_message}")
+    push(f"Tool Called: New message received - Question/Message: {user_message}")
     return {"recorded": "ok"}
 
 # Tool JSON schema for recording user details
@@ -189,10 +189,13 @@ def handle_tool_calls(tool_calls):
 
         # Call the appropriate function
         if tool_name == "record_user_details":
+            message = f"Tool Called: User Contact - Name: {arguments.get('name', 'Not provided')}, Email: {arguments.get('email')}"
             result = record_user_details(**arguments)
         elif tool_name == "record_unknown_question":
+            message = f"Tool Called: Unknown Question: {arguments.get('question')}"
             result = record_unknown_question(**arguments)
         elif tool_name == "record_all_question":
+            message = f"Tool Called: Received Message: {arguments.get('user_message')}"
             result = record_all_question(**arguments)
 
         results.append({
@@ -216,10 +219,10 @@ particularly questions related to {self.name}'s career, background, skills and e
 Your responsibility is to represent {self.name} for interactions on the website as faithfully as possible. \
 You are given a summary of {self.name}'s background which you can use to answer questions. \
 Be professional and engaging and respectful with a mild humour, as if talking to a friend, potential client or future employer who came across the website. \
-There are 3 Tools you have: record_user_details, record_unknown_question and record_all_question. \
-1) record_user_details is used to record that a user is interested in being in touch and provided an email address. \
-2) record_unknown_question is used to record any question that couldn't be answered as you didn't know the answer. \
-3) record_all_question is used to record every message/question received from users."""
+You have access to 3 tools that you should use appropriately: \
+1) record_user_details - use this when a user is interested in being in touch and provides an email address \
+2) record_unknown_question - use this when you encounter a question you couldn't answer \
+3) record_all_question - use this for EVERY message received to ensure it's logged. This is important for tracking all interactions."""
 
         self.system_prompt += f"\n\n## Content scraped from {self.name}'s website:\n{self.user_content}\n\n"
         self.system_prompt += f"With this context, please chat with the user, always staying in character as {self.name}."
@@ -229,13 +232,13 @@ There are 3 Tools you have: record_user_details, record_unknown_question and rec
         messages = [{"role": "system", "content": self.system_prompt}] + history + [{"role": "user", "content": message}]
         done = False
 
+        push(f"Message recieved from user: {message}")
+
         while not done:
             # Make LLM call (Gemini-style response parsing)
             response = gemini.beta.chat.completions.parse(
                 model="gemini-2.0-flash", messages=messages, tools=tools
             )
-
-            push(f"New message received: {message}")
             
             finish_reason = response.choices[0].finish_reason
             print(finish_reason)
@@ -250,6 +253,7 @@ There are 3 Tools you have: record_user_details, record_unknown_question and rec
             else:
                 done = True
 
+        push(f"Response from LLM: {response.choices[0].message.content}")
         return response.choices[0].message.content
 
 # Launch the Gradio chatbot UI
@@ -259,8 +263,7 @@ if __name__ == "__main__":
     gr.ChatInterface(
         fn=me.chat,
         type="messages",
-        title=f"Welcome to {NAME}'s Assistant",
-        description=f"Hi, I'm {NAME} (virtually) digital twin.",
+        title=f"Welcome to {NAME}'s Digital Twin",
         examples=[
             "What is your experience?",
             "What are your recent projects?",
