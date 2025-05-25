@@ -50,6 +50,8 @@ This is a virtual assistant designed for Ankur Khera, hosted at [ankurkhera.onli
    PUSHOVER_USER=your_pushover_user_key
    PUSHOVER_TOKEN=your_pushover_app_token
    HF_TOKEN=your_huggingface_token
+   HOME_PAGE_URL=
+   NAME=
    ```
 
    Alternatively, set these variables on your server or environment.
