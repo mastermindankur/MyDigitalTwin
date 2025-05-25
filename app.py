@@ -98,6 +98,7 @@ gemini = OpenAI(
 pushover_user = os.getenv("PUSHOVER_USER")
 pushover_token = os.getenv("PUSHOVER_TOKEN")
 pushover_url = "https://api.pushover.net/1/messages.json"
+NAME = os.getenv("NAME")
 
 # Utility to send Pushover push notifications
 def push(message):
@@ -110,12 +111,17 @@ push("hello ankur khera and aishwarya gupta!")
 
 # Function to record user contact details
 def record_user_details(email, name="Name not provided", notes="not provided"):
-    push(f"Recording interest from {name} with email {email} and notes {notes}")
+    push(f"Recording interest from Name: {name} with Email: {email} and notes {notes}")
     return {"recorded": "ok"}
 
 # Function to record unanswered questions
 def record_unknown_question(question):
-    push(f"Recording {question} asked that I couldn't answer")
+    push(f"Recording Question: {question}, which i could not answer")
+    return {"recorded": "ok"}
+
+# Function to record all questions
+def record_all_question(question, user_message):
+    push(f"New message received - Question/Message: {user_message}")
     return {"recorded": "ok"}
 
 # Tool JSON schema for recording user details
@@ -150,10 +156,27 @@ record_unknown_question_json = {
     "strict": True
 }
 
+# Tool JSON schema for recording all questions
+record_all_question_json = {
+    "name": "record_all_question",
+    "description": "Use this tool to record every message/question received from users",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "question": {"type": "string", "description": "Whether this is a question or not"},
+            "user_message": {"type": "string", "description": "The actual message from the user"}
+        },
+        "required": ["question", "user_message"],
+        "additionalProperties": False
+    },
+    "strict": True
+}
+
 # Register tools
 tools = [
     {"type": "function", "function": record_user_details_json},
-    {"type": "function", "function": record_unknown_question_json}
+    {"type": "function", "function": record_unknown_question_json},
+    {"type": "function", "function": record_all_question_json}
 ]
 
 # Function to process tool calls dynamically
@@ -169,6 +192,8 @@ def handle_tool_calls(tool_calls):
             result = record_user_details(**arguments)
         elif tool_name == "record_unknown_question":
             result = record_unknown_question(**arguments)
+        elif tool_name == "record_all_question":
+            result = record_all_question(**arguments)
 
         results.append({
             "role": "tool",
@@ -180,10 +205,10 @@ def handle_tool_calls(tool_calls):
 # Virtual Assistant class definition
 class Me:
     def __init__(self):
-        self.name = "Ankur Khera"
+        self.name = os.getenv("NAME")
         
         # Crawl and read personal website
-        self.user_content = read_profile_from_web("https://ankurkhera.online/")
+        self.user_content = read_profile_from_web(os.getenv("HOME_PAGE_URL"))
 
         # System prompt to guide LLM behavior
         self.system_prompt = f"""You are acting as {self.name}. You are answering questions on {self.name}'s website, \
@@ -191,9 +216,10 @@ particularly questions related to {self.name}'s career, background, skills and e
 Your responsibility is to represent {self.name} for interactions on the website as faithfully as possible. \
 You are given a summary of {self.name}'s background which you can use to answer questions. \
 Be professional and engaging and respectful with a mild humour, as if talking to a friend, potential client or future employer who came across the website. \
-There are 2 Tools you have: record_user_details and record_unknown_question. \
+There are 3 Tools you have: record_user_details, record_unknown_question and record_all_question. \
 1) record_user_details is used to record that a user is interested in being in touch and provided an email address. \
-2) record_unknown_question is used to record any question that couldn't be answered as you didn't know the answer."""
+2) record_unknown_question is used to record any question that couldn't be answered as you didn't know the answer. \
+3) record_all_question is used to record every message/question received from users."""
 
         self.system_prompt += f"\n\n## Content scraped from {self.name}'s website:\n{self.user_content}\n\n"
         self.system_prompt += f"With this context, please chat with the user, always staying in character as {self.name}."
@@ -208,6 +234,8 @@ There are 2 Tools you have: record_user_details and record_unknown_question. \
             response = gemini.beta.chat.completions.parse(
                 model="gemini-2.0-flash", messages=messages, tools=tools
             )
+
+            push(f"New message received: {message}")
             
             finish_reason = response.choices[0].finish_reason
             print(finish_reason)
@@ -231,8 +259,8 @@ if __name__ == "__main__":
     gr.ChatInterface(
         fn=me.chat,
         type="messages",
-        title="Welcome to Ankur Khera's Assistant",
-        description="Hi, I'm Ankur (virtually). Ask me anything about my background, work",
+        title=f"Welcome to {NAME}'s Assistant",
+        description=f"Hi, I'm {NAME} (virtually) digital twin.",
         examples=[
             "What is your experience?",
             "What are your recent projects?",
@@ -240,7 +268,7 @@ if __name__ == "__main__":
         ],
         chatbot=gr.Chatbot(
             value=[
-                {"role": "assistant", "content": "Hi there! 👋 I'm Ankur Khera's virtual assistant. Ask me anything about my career or background."}
+                {"role": "assistant", "content": f"Hi there! 👋 I'm {NAME}'s virtual assistant. Ask me anything about my career or background."}
             ],
             type="messages",
             height="70vh"
