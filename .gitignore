@@ -1,0 +1,22 @@
+# Python virtual environment
+.venv/
+__pycache__/
+*.pyc
+
+# Environment files
+.env
+.env.*
+
+# Package management
+uv.lock
+
+# IDE files
+.vscode/
+.idea/
+
+# System files
+.DS_Store
+*.log
+
+# Local development files
+.python-version .env
