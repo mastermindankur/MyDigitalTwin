@@ -106,22 +106,59 @@ def push(message):
     payload = {"user": pushover_user, "token": pushover_token, "message": message}
     requests.post(pushover_url, data=payload)
 
+
+import os
+import requests
+bot_token=os.getenv("BOT_TOKEN")
+chat_id=os.getenv("CHAT_ID")
+
+def send_telegram_message(bot_token: str, chat_id: str, message: str) -> bool:
+    """
+    Sends a message to a Telegram user or group via a bot.
+
+    Args:
+        bot_token (str): Telegram bot token from BotFather.
+        chat_id (str): The chat ID to which the message will be sent.
+        message (str): The message text to send.
+
+    Returns:
+        bool: True if the message was sent successfully, False otherwise.
+    """
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    print(bot_token)
+    print(chat_id)
+    payload = {
+        "chat_id": chat_id,
+        "text": message
+    }
+
+    try:
+        response = requests.post(url, data=payload)
+        return response.status_code == 200
+    except Exception as e:
+        print(f"Error sending message: {e}")
+        return False
+
 # Sample push to verify Pushover setup
 push("hello ankur khera and aishwarya gupta!")
+send_telegram_message(bot_token,chat_id,"hello ankur khera and aishwarya gupta!")
 
 # Function to record user contact details
 def record_user_details(email, name="Name not provided", notes="not provided"):
-    push(f"Tool Called: Recording interest from Name: {name} with Email: {email} and notes {notes}")
+    send_telegram_message(bot_token,chat_id,f"Tool Called: Recording interest from Name: {name} with Email: {email} and notes {notes}")
+    #push(f"Tool Called: Recording interest from Name: {name} with Email: {email} and notes {notes}")
     return {"recorded": "ok"}
 
 # Function to record unanswered questions
 def record_unknown_question(question):
-    push(f"Tool Called: Recording Question: {question}, which i could not answer")
+    send_telegram_message(bot_token,chat_id,f"Tool Called: Recording Question: {question}, which i could not answer")
+    #push(f"Tool Called: Recording Question: {question}, which i could not answer")
     return {"recorded": "ok"}
 
 # Function to record all questions
 def record_all_question(question, user_message):
-    push(f"Tool Called: New message received - Question/Message: {user_message}")
+    send_telegram_message(bot_token,chat_id,f"Tool Called: New message received - Question/Message: {user_message}")
+    #push(f"Tool Called: New message received - Question/Message: {user_message}")
     return {"recorded": "ok"}
 
 # Tool JSON schema for recording user details
@@ -232,7 +269,8 @@ You have access to 3 tools that you should use appropriately: \
         messages = [{"role": "system", "content": self.system_prompt}] + history + [{"role": "user", "content": message}]
         done = False
 
-        push(f"Message recieved from user: {message}")
+        #push(f"Message recieved from user: {message}")
+        send_telegram_message(bot_token,chat_id,f"Message recieved from user: {message}")
 
         while not done:
             # Make LLM call (Gemini-style response parsing)
@@ -254,6 +292,7 @@ You have access to 3 tools that you should use appropriately: \
                 done = True
 
         push(f"Response from LLM: {response.choices[0].message.content}")
+        send_telegram_message(bot_token,chat_id,f"Response from LLM: {response.choices[0].message.content}")
         return response.choices[0].message.content
 
 # Launch the Gradio chatbot UI
